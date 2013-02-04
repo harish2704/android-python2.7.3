@@ -75,11 +75,7 @@ mkpwent(struct passwd *p)
 #endif
     SETI(setIndex++, p->pw_uid);
     SETI(setIndex++, p->pw_gid);
-#ifdef __VMS
     SETS(setIndex++, "");
-#else
-    SETS(setIndex++, p->pw_gecos);
-#endif
     SETS(setIndex++, p->pw_dir);
     SETS(setIndex++, p->pw_shell);
 

@@ -712,11 +712,13 @@ class PyBuildExt(build_ext):
 
         # crypt module.
 
-        if self.compiler.find_library_file(lib_dirs, 'crypt'):
+        crypt_libdir = ['../obj/local/'+os.environ['ARCH']]
+
+        if self.compiler.find_library_file(crypt_libdir, 'crypt'):
             libs = ['crypt']
         else:
             libs = []
-        exts.append( Extension('crypt', ['cryptmodule.c'], libraries=libs) )
+        exts.append( Extension('crypt', ['cryptmodule.c'], library_dirs=crypt_libdir, libraries=libs) )
 
         # CSV files
         exts.append( Extension('_csv', ['_csv.c']) )
@@ -741,6 +743,9 @@ class PyBuildExt(build_ext):
                                      ['/usr/local/ssl/lib',
                                       '/usr/contrib/ssl/lib/'
                                      ] )
+
+        ssl_incs = ['../openssl/include']
+        ssl_libs = ['../openssl/obj/local/'+os.environ['ARCH']]
 
         if (ssl_incs is not None and
             ssl_libs is not None):
@@ -776,8 +781,8 @@ class PyBuildExt(build_ext):
 
         min_openssl_ver = 0x00907000
         have_any_openssl = ssl_incs is not None and ssl_libs is not None
-        have_usable_openssl = (have_any_openssl and
-                               openssl_ver >= min_openssl_ver)
+        have_usable_openssl = (have_any_openssl and True)
+                               #openssl_ver >= min_openssl_ver)
 
         if have_any_openssl:
             if have_usable_openssl:
@@ -1105,6 +1110,9 @@ class PyBuildExt(build_ext):
             if sqlite_libfile:
                 sqlite_libdir = [os.path.abspath(os.path.dirname(sqlite_libfile))]
 
+        sqlite_incdir = '../jni/sqlite3'
+        sqlite_libdir = ['../obj/local/'+os.environ['ARCH']]
+
         if sqlite_incdir and sqlite_libdir:
             sqlite_srcs = ['_sqlite/cache.c',
                 '_sqlite/connection.c',
@@ -1332,7 +1340,8 @@ class PyBuildExt(build_ext):
         #
         # You can upgrade zlib to version 1.1.4 yourself by going to
         # http://www.gzip.org/zlib/
-        zlib_inc = find_file('zlib.h', [], inc_dirs)
+        zlib_inc = [os.path.join(os.environ['NDKPLATFORM'], 'usr/include')]
+        zlib_libdir = [os.path.join(os.environ['NDKPLATFORM'], 'usr/lib')]
         have_zlib = False
         if zlib_inc is not None:
             zlib_h = zlib_inc[0] + '/zlib.h'
@@ -1347,12 +1356,13 @@ class PyBuildExt(build_ext):
                     version = line.split()[2]
                     break
             if version >= version_req:
-                if (self.compiler.find_library_file(lib_dirs, 'z')):
+                if (self.compiler.find_library_file(zlib_libdir, 'z')):
                     if sys.platform == "darwin":
                         zlib_extra_link_args = ('-Wl,-search_paths_first',)
                     else:
                         zlib_extra_link_args = ()
                     exts.append( Extension('zlib', ['zlibmodule.c'],
+                                           library_dirs=zlib_libdir,
                                            libraries = ['z'],
                                            extra_link_args = zlib_extra_link_args))
                     have_zlib = True

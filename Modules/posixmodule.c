@@ -3785,13 +3785,6 @@ posix_openpty(PyObject *self, PyObject *noargs)
     slave_fd = open(slave_name, O_RDWR | O_NOCTTY); /* open slave */
     if (slave_fd < 0)
         return posix_error();
-#if !defined(__CYGWIN__) && !defined(HAVE_DEV_PTC)
-    ioctl(slave_fd, I_PUSH, "ptem"); /* push ptem */
-    ioctl(slave_fd, I_PUSH, "ldterm"); /* push ldterm */
-#ifndef __hpux
-    ioctl(slave_fd, I_PUSH, "ttcompat"); /* push ttcompat */
-#endif /* __hpux */
-#endif /* HAVE_CYGWIN */
 #endif /* HAVE_OPENPTY */
 
     return Py_BuildValue("(ii)", master_fd, slave_fd);
