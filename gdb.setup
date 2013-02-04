@@ -1,0 +1,25 @@
+set solib-search-path /home/harish/android-ndk-r6b/samples/bitmap-plasma/obj/local/armeabi
+directory /home/harish/android-ndk-r6b/platforms/android-9/arch-arm/usr/include /home/harish/android-ndk-r6b/samples/bitmap-plasma/jni /home/harish/android-ndk-r6b/sources/cxx-stl/system
+
+set solib-search-path /data/local/lib:/home/harish/android-ndk-r6b/platforms/android-9/arch-arm/usr/lib
+
+
+set solib-search-path /data/local/lib:/home/harish/Downloads/Build/Python-3.2/arm/build/lib.linux-i686-2.7
+set print pretty on
+set print array on
+set print address on
+set stop-on-solib-events 1
+directory /home/harish/android-ndk-r6b/platforms/android-9/arch-arm/usr/include
+target remote 192.168.42.129:5039 
+break Modules/main.c:575
+break ./Python/importdl.c:42
+break Modules/readline.c:1119
+
+break Python/import.c:1831
+break Python/import.c:2595
+break Python/import.c:2585
+break Python/import.c:2773
+break Python/import.c:2042
+break _PyImportHooks_Init
+break initreadline
+break initmath
