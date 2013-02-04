@@ -145,6 +145,7 @@ class PyBuildExt(build_ext):
     def __init__(self, dist):
         build_ext.__init__(self, dist)
         self.failed = []
+        self.cross_compile = os.environ.get('CROSS_COMPILE_TARGET') == 'yes'
 
     def build_extensions(self):
 
@@ -278,6 +279,14 @@ class PyBuildExt(build_ext):
                           (ext.name, sys.exc_info()[1]))
             self.failed.append(ext.name)
             return
+
+        # Import check will not work when cross-compiling.
+        if os.environ.has_key('PYTHONXCPREFIX'):
+            self.announce(
+                'WARNING: skipping import check for cross-compiled: "%s"' %
+                ext.name)
+            return
+
         # Workaround for Mac OS X: The Carbon-based modules cannot be
         # reliably imported into a command-line Python
         if 'Carbon' in ext.extra_link_args:
@@ -369,9 +378,10 @@ class PyBuildExt(build_ext):
 
     def detect_modules(self):
         # Ensure that /usr/local is always used
-        add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')
-        add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
-        self.add_multiarch_paths()
+        if not self.cross_compile:
+            add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')
+            add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')
+            self.add_multiarch_paths()
 
         # Add paths specified in the environment variables LDFLAGS and
         # CPPFLAGS for header and library files.
@@ -408,7 +418,8 @@ class PyBuildExt(build_ext):
                         add_dir_to_list(dir_list, directory)
 
         if os.path.normpath(sys.prefix) != '/usr' \
-                and not sysconfig.get_config_var('PYTHONFRAMEWORK'):
+                and not sysconfig.get_config_var('PYTHONFRAMEWORK') \
+                and not self.cross_compile:
             # OSX note: Don't add LIBDIR and INCLUDEDIR to building a framework
             # (PYTHONFRAMEWORK is set) to avoid # linking problems when
             # building a framework with different architectures than
@@ -426,11 +437,23 @@ class PyBuildExt(build_ext):
         # lib_dirs and inc_dirs are used to search for files;
         # if a file is found in one of those directories, it can
         # be assumed that no additional -I,-L directives are needed.
-        lib_dirs = self.compiler.library_dirs + [
-            '/lib64', '/usr/lib64',
-            '/lib', '/usr/lib',
-            ]
-        inc_dirs = self.compiler.include_dirs + ['/usr/include']
+        lib_dirs = self.compiler.library_dirs
+        inc_dirs = self.compiler.include_dirs
+        if not self.cross_compile:
+            lib_dirs += [
+                '/lib64', '/usr/lib64',
+                '/lib', '/usr/lib',
+                ]
+            inc_dirs += ['/usr/include']
+        else:
+            # The common install prefix of 3rd party libraries used during
+            # cross compilation
+            mydir = os.environ.get('PYTHON_XCOMPILE_DEPENDENCIES_PREFIX')
+            if mydir:
+                inc_dirs += [mydir + '/include' ]
+                inc_dirs += [mydir + '/lib/libffi-3.0.10/include']
+                lib_dirs += [mydir + '/lib' ]
+
         exts = []
         missing = []
 
@@ -1004,13 +1027,24 @@ class PyBuildExt(build_ext):
         # We hunt for #define SQLITE_VERSION "n.n.n"
         # We need to find >= sqlite version 3.0.8
         sqlite_incdir = sqlite_libdir = None
-        sqlite_inc_paths = [ '/usr/include',
-                             '/usr/include/sqlite',
-                             '/usr/include/sqlite3',
-                             '/usr/local/include',
-                             '/usr/local/include/sqlite',
-                             '/usr/local/include/sqlite3',
-                           ]
+
+        if not self.cross_compile:
+            sqlite_inc_paths = [ '/usr/include',
+                                 '/usr/include/sqlite',
+                                 '/usr/include/sqlite3',
+                                 '/usr/local/include',
+                                 '/usr/local/include/sqlite',
+                                 '/usr/local/include/sqlite3',
+                                ]
+        else:
+            # The common install prefix of 3rd party headers used during
+            # cross compilation
+            mydir = os.environ.get('PYTHON_XCOMPILE_DEPENDENCIES_PREFIX')
+            if mydir:
+                sqlite_inc_paths = [mydir + '/include' ]
+            else:
+                sqlite_inc_paths = []
+
         MIN_SQLITE_VERSION_NUMBER = (3, 0, 8)
         MIN_SQLITE_VERSION = ".".join([str(x)
                                     for x in MIN_SQLITE_VERSION_NUMBER])
@@ -1050,12 +1084,22 @@ class PyBuildExt(build_ext):
                     print "sqlite: %s had no SQLITE_VERSION"%(f,)
 
         if sqlite_incdir:
-            sqlite_dirs_to_check = [
-                os.path.join(sqlite_incdir, '..', 'lib64'),
-                os.path.join(sqlite_incdir, '..', 'lib'),
-                os.path.join(sqlite_incdir, '..', '..', 'lib64'),
-                os.path.join(sqlite_incdir, '..', '..', 'lib'),
-            ]
+            if not self.cross_compile:
+                sqlite_dirs_to_check = [
+                    os.path.join(sqlite_incdir, '..', 'lib64'),
+                    os.path.join(sqlite_incdir, '..', 'lib'),
+                    os.path.join(sqlite_incdir, '..', '..', 'lib64'),
+                    os.path.join(sqlite_incdir, '..', '..', 'lib'),
+                ]
+            else:
+                # The common install prefix of 3rd party headers used during
+                # cross compilation
+                mydir = os.environ.get('PYTHON_XCOMPILE_DEPENDENCIES_PREFIX')
+                if mydir:
+                    sqlite_dirs_to_check = [mydir + '/lib' ]
+                else:
+                    sqlite_dirs_to_check = []
+
             sqlite_libfile = self.compiler.find_library_file(
                                 sqlite_dirs_to_check + lib_dirs, 'sqlite3')
             if sqlite_libfile:
@@ -1864,8 +1908,15 @@ class PyBuildExt(build_ext):
 
                 # Pass empty CFLAGS because we'll just append the resulting
                 # CFLAGS to Python's; -g or -O2 is to be avoided.
-                cmd = "cd %s && env CFLAGS='' '%s/configure' %s" \
-                      % (ffi_builddir, ffi_srcdir, " ".join(config_args))
+                if self.cross_compile:
+                    cmd = "cd %s && env CFLAGS='' %s/configure --host=%s --build=%s %s" \
+                          % (ffi_builddir, ffi_srcdir,
+                             os.environ.get('HOSTARCH'),
+                             os.environ.get('BUILDARCH'),
+                             " ".join(config_args))
+                else:
+                    cmd = "cd %s && env CFLAGS='' '%s/configure' %s" \
+                          % (ffi_builddir, ffi_srcdir, " ".join(config_args))
 
                 res = os.system(cmd)
                 if res or not os.path.exists(ffi_configfile):
