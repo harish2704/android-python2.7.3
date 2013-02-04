@@ -20,6 +20,8 @@ This software comes with no warranty. Use at your own risk.
 #include <errno.h>
 #endif
 
+#define ANDROID
+
 #ifdef HAVE_LANGINFO_H
 #include <langinfo.h>
 #endif
@@ -205,6 +207,7 @@ PyDoc_STRVAR(localeconv__doc__,
 static PyObject*
 PyLocale_localeconv(PyObject* self)
 {
+    #ifndef ANDROID
     PyObject* result;
     struct lconv *l;
     PyObject *x;
@@ -265,6 +268,7 @@ PyLocale_localeconv(PyObject* self)
   failed:
     Py_XDECREF(result);
     Py_XDECREF(x);
+    #endif // ANDROID
     return NULL;
 }
 

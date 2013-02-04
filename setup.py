@@ -648,7 +648,8 @@ class PyBuildExt(build_ext):
         curses_library = ""
         # Determine if readline is already linked against curses or tinfo.
         if do_readline and find_executable('ldd'):
-            fp = os.popen("ldd %s" % do_readline)
+            # fp = os.popen("ldd %s" % do_readline)
+            fp = os.popen("arm-linux-androideabi-objdump -x %s | grep NEEDED" % do_readline)
             ldd_output = fp.readlines()
             ret = fp.close()
             if ret is None or ret >> 8 == 0:
@@ -671,6 +672,10 @@ class PyBuildExt(build_ext):
             curses_library = 'ncurses'
         elif self.compiler.find_library_file(lib_dirs, 'curses'):
             curses_library = 'curses'
+        print 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
+        print curses_library
+        print readline_termcap_library
+        print do_readline
 
         if platform == 'darwin':
             os_release = int(os.uname()[2].split('.')[0])
@@ -692,7 +697,7 @@ class PyBuildExt(build_ext):
                 # before the (possibly broken) dynamic library in /usr/lib.
                 readline_extra_link_args = ('-Wl,-search_paths_first',)
             else:
-                readline_extra_link_args = ()
+                readline_extra_link_args = ( '-lncurses',)
 
             readline_libs = ['readline']
             if readline_termcap_library:
@@ -1340,8 +1345,7 @@ class PyBuildExt(build_ext):
         #
         # You can upgrade zlib to version 1.1.4 yourself by going to
         # http://www.gzip.org/zlib/
-        zlib_inc = [os.path.join(os.environ['NDKPLATFORM'], 'usr/include')]
-        zlib_libdir = [os.path.join(os.environ['NDKPLATFORM'], 'usr/lib')]
+        zlib_inc = find_file('zlib.h', [], inc_dirs)
         have_zlib = False
         if zlib_inc is not None:
             zlib_h = zlib_inc[0] + '/zlib.h'
@@ -1356,7 +1360,7 @@ class PyBuildExt(build_ext):
                     version = line.split()[2]
                     break
             if version >= version_req:
-                if (self.compiler.find_library_file(zlib_libdir, 'z')):
+                if (self.compiler.find_library_file(lib_dirs, 'z')):
                     if sys.platform == "darwin":
                         zlib_extra_link_args = ('-Wl,-search_paths_first',)
                     else:
