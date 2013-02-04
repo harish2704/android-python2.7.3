@@ -4,16 +4,20 @@ directory /home/harish/android-ndk-r6b/platforms/android-9/arch-arm/usr/include 
 set solib-search-path /data/local/lib:/home/harish/android-ndk-r6b/platforms/android-9/arch-arm/usr/lib
 
 
-set solib-search-path /data/local/lib:/home/harish/Downloads/Build/Python-3.2/arm/build/lib.linux-i686-2.7
+set solib-search-path /data/local/lib:/home/harish/Downloads/Build/Python-3.2/Python-2.7.3/build/lib.linux-i686-2.7
 set print pretty on
 set print array on
 set print address on
 set stop-on-solib-events 1
 directory /home/harish/android-ndk-r6b/platforms/android-9/arch-arm/usr/include
-target remote 192.168.42.129:5039 
-break Modules/main.c:575
+target remote 192.168.42.129:5039
 break ./Python/importdl.c:42
-break Modules/readline.c:1119
+break Python/dynload_shlib.c:130
+break /home/harish/Downloads/Build/Python-3.2/Python-2.7.3/Modules/readline.c:863
+sharedlibrary 
+break initreadline
+
+break Modules/main.c:575
 
 break Python/import.c:1831
 break Python/import.c:2595
