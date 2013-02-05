@@ -438,7 +438,9 @@ class PyBuildExt(build_ext):
         # if a file is found in one of those directories, it can
         # be assumed that no additional -I,-L directives are needed.
         lib_dirs = self.compiler.library_dirs
+        lib_dirs += os.getenv('LIBS').split(':')
         inc_dirs = self.compiler.include_dirs
+        inc_dirs += os.getenv('INCLUDES').split(':')
         if not self.cross_compile:
             lib_dirs += [
                 '/lib64', '/usr/lib64',
@@ -672,10 +674,6 @@ class PyBuildExt(build_ext):
             curses_library = 'ncurses'
         elif self.compiler.find_library_file(lib_dirs, 'curses'):
             curses_library = 'curses'
-        print 'aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa'
-        print curses_library
-        print readline_termcap_library
-        print do_readline
 
         if platform == 'darwin':
             os_release = int(os.uname()[2].split('.')[0])
@@ -1346,7 +1344,7 @@ class PyBuildExt(build_ext):
         # You can upgrade zlib to version 1.1.4 yourself by going to
         # http://www.gzip.org/zlib/
         zlib_inc = find_file('zlib.h', [], inc_dirs)
-        have_zlib = False
+        have_zlib = True
         if zlib_inc is not None:
             zlib_h = zlib_inc[0] + '/zlib.h'
             version = '"0.0.0"'
@@ -1360,13 +1358,14 @@ class PyBuildExt(build_ext):
                     version = line.split()[2]
                     break
             if version >= version_req:
+                zlib_extra_link_args = ('')
                 if (self.compiler.find_library_file(lib_dirs, 'z')):
                     if sys.platform == "darwin":
-                        zlib_extra_link_args = ('-Wl,-search_paths_first',)
+                        zlib_extra_link_args += ('-Wl,-search_paths_first',)
                     else:
-                        zlib_extra_link_args = ()
+                        pass
                     exts.append( Extension('zlib', ['zlibmodule.c'],
-                                           library_dirs=zlib_libdir,
+                                           library_dirs=lib_dirs,
                                            libraries = ['z'],
                                            extra_link_args = zlib_extra_link_args))
                     have_zlib = True
@@ -1467,6 +1466,7 @@ class PyBuildExt(build_ext):
         if sys.maxint == 0x7fffffff:
             # This requires sizeof(int) == sizeof(long) == sizeof(char*)
             dl_inc = find_file('dlfcn.h', [], inc_dirs)
+            
             if (dl_inc is not None) and (platform not in ['atheos']):
                 exts.append( Extension('dl', ['dlmodule.c']) )
             else:

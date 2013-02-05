@@ -570,6 +570,7 @@ DEFAULT_MMAP_THRESHOLD       default: 256K
 #ifndef USE_DEV_RANDOM
 #define USE_DEV_RANDOM 0
 #endif  /* USE_DEV_RANDOM */
+#define NO_MALLINFO 1
 #ifndef NO_MALLINFO
 #define NO_MALLINFO 0
 #endif  /* NO_MALLINFO */
