@@ -1,8 +1,3 @@
-set solib-search-path /home/harish/android-ndk-r6b/samples/bitmap-plasma/obj/local/armeabi
-directory /home/harish/android-ndk-r6b/platforms/android-9/arch-arm/usr/include /home/harish/android-ndk-r6b/samples/bitmap-plasma/jni /home/harish/android-ndk-r6b/sources/cxx-stl/system
-
-set solib-search-path /data/local/lib:/home/harish/android-ndk-r6b/platforms/android-9/arch-arm/usr/lib
-
 
 set solib-search-path /data/local/lib:/home/harish/Downloads/Build/Python-3.2/Python-2.7.3/build/lib.linux-i686-2.7
 set print pretty on
@@ -16,14 +11,3 @@ break Python/dynload_shlib.c:130
 break /home/harish/Downloads/Build/Python-3.2/Python-2.7.3/Modules/readline.c:863
 sharedlibrary 
 break initreadline
-
-break Modules/main.c:575
-
-break Python/import.c:1831
-break Python/import.c:2595
-break Python/import.c:2585
-break Python/import.c:2773
-break Python/import.c:2042
-break _PyImportHooks_Init
-break initreadline
-break initmath
